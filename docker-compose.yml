@@ -1,0 +1,54 @@
+data:
+  build: ./data
+  volumes:
+    - ../../Projects/sk-api:/var/www/sk-api
+  links:
+   - db:db
+  container_name: sk_data
+php7-fpm:
+  build: ./php7-fpm
+  volumes_from:
+    - data
+  links:
+    - db:db
+  working_dir: /var/www/sk-api
+  container_name: sk_php
+  expose:
+    - "9000"
+nginx:
+  build: ./nginx
+  ports:
+    - 80:80
+    - 443:443
+  volumes_from:
+    - data
+  links:
+    - php7-fpm
+  environment:
+      VHOSTS: sk-api.dev
+  volumes:
+    - ./_logs/nginx/:/var/log/nginx
+  container_name: sk_nginx
+db:
+  image: mysql:5.7.11
+  ports:
+    - 3306:3306
+  environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: sk-api
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+  container_name: sk_mysql
+  volumes:
+    - ./_bck/mysql:/var/lib/mysql
+elk:
+    image: willdurand/elk
+    ports:
+        - "81:80"
+    volumes:
+        - ./elk/logstash:/etc/logstash
+        - ./elk/logstash/patterns:/opt/logstash/patterns
+    volumes_from:
+        - php7-fpm
+        - nginx
+    container_name: sk_elk
